@@ -1,7 +1,7 @@
 #!/bin/bash
-podman build . -t haproxy-okta-gateway 
+podman build . -t haproxy-python-spoa 
 podman run \
     -t -i \
     --rm \
     --network=host \
-    haproxy-okta-gateway
+    haproxy-python-spoa 
