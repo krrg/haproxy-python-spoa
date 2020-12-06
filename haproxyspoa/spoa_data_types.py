@@ -27,21 +27,22 @@ def __is_middle_byte(byte: int) -> bool:
 
 
 def parse_varint(buffer: io.BytesIO) -> int:
-    head = int.from_bytes(buffer.read(1), byteorder='little', signed=False)
+    head = buffer.read(1)[0]
+
+    print("Raw head byte", hex(head))
 
     if head < SINGLE_BYTE_MAX:
         return head
 
-    actual_number = (head & 0x0F)  # Grab the last 4 bits of the header
-
+    shift = 4
+    actual_value = head
     while True:
         next_byte = buffer.read(1)[0]
-
-        actual_number <<= 7
-        actual_number &= (next_byte & 0x7f)
+        actual_value += next_byte << shift
+        shift += 7
 
         if next_byte < MIDDLE_BYTE_MASK:
-            return actual_number
+            return actual_value
 
 
 def parse_int32(buffer: io.BytesIO) -> int:
@@ -97,10 +98,6 @@ def parse_typed_data(buffer: io.BytesIO):
     #  but this is how Haproxy _actually_ behaves.
     type = type_flags & 0x0F
     flags = (type_flags & 0xF0) >> 4
-
-    print(f"Got type_flags of {bin(type_flags)}")
-    print(f"Parsing data type {bin(type)}, {type}")
-    print(f"Got flags of {bin(flags)}")
 
     if type == SpopDataTypes.NULL:
         return None
