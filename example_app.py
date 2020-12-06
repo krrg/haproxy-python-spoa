@@ -2,8 +2,10 @@
 
 from aiohttp import web
 
-async def handle(request):
+
+async def handle(_: web.Request):
     return web.Response(text="Hello Earthling, I hope you are authenticated.")
+
 
 app = web.Application()
 app.add_routes([web.get("/", handle)])

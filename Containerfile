@@ -1,6 +1,6 @@
-FROM haproxy:2.0.19
+FROM haproxy:2.2
 
-COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
+COPY haproxy/ /usr/local/etc/haproxy/
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["haproxy", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+CMD ["haproxy", "-f", "/usr/local/etc/haproxy"]
