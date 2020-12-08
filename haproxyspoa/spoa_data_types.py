@@ -29,8 +29,6 @@ def __is_middle_byte(byte: int) -> bool:
 def parse_varint(buffer: io.BytesIO) -> int:
     head = buffer.read(1)[0]
 
-    print("Raw head byte", hex(head))
-
     if head < SINGLE_BYTE_MAX:
         return head
 
@@ -96,31 +94,31 @@ def parse_typed_data(buffer: io.BytesIO):
 
     # The order of the octets is backwards from what the documentation says,
     #  but this is how Haproxy _actually_ behaves.
-    type = type_flags & 0x0F
+    _type = type_flags & 0x0F
     flags = (type_flags & 0xF0) >> 4
 
-    if type == SpopDataTypes.NULL:
+    if _type == SpopDataTypes.NULL:
         return None
-    elif type == SpopDataTypes.BOOL:
+    elif _type == SpopDataTypes.BOOL:
         return bool(flags & 0b1000)
-    elif type == SpopDataTypes.INT32:
+    elif _type == SpopDataTypes.INT32:
         return parse_int32(buffer)
-    elif type == SpopDataTypes.UINT32:
+    elif _type == SpopDataTypes.UINT32:
         return parse_uint32(buffer)
-    elif type == SpopDataTypes.INT64:
+    elif _type == SpopDataTypes.INT64:
         return parse_int64(buffer)
-    elif type == SpopDataTypes.UINT64:
+    elif _type == SpopDataTypes.UINT64:
         return parse_uint64(buffer)
-    elif type == SpopDataTypes.IPV4:
+    elif _type == SpopDataTypes.IPV4:
         return parse_ipv4(buffer)
-    elif type == SpopDataTypes.IPV6:
+    elif _type == SpopDataTypes.IPV6:
         return parse_ipv6(buffer)
-    elif type == SpopDataTypes.STRING:
+    elif _type == SpopDataTypes.STRING:
         return parse_string(buffer)
-    elif type == SpopDataTypes.BINARY:
+    elif _type == SpopDataTypes.BINARY:
         return parse_binary(buffer)
     else:
-        raise ValueError(f"Data type `{type}` is unknown, your copy of Haproxy is likely counterfeit ( ͡° ͜ʖ ͡° )")
+        raise ValueError(f"Data type `{_type}` is unknown, your copy of Haproxy is likely counterfeit ( ͡° ͜ʖ ͡° )")
 
 
 def write_varint(value: int) -> bytes:
@@ -134,16 +132,16 @@ def write_varint(value: int) -> bytes:
 
     byte_list = []
 
-    header_byte = (value | SINGLE_BYTE_MAX).to_bytes(1, **byte_conv_params)[0]
+    header_byte = (value | SINGLE_BYTE_MAX) & 0xFF
     byte_list.append(header_byte)
     value = (value - SINGLE_BYTE_MAX) >> 4
 
     while value >= MIDDLE_BYTE_MASK:
-        middle_byte = (value | MIDDLE_BYTE_MASK).to_bytes(1, **byte_conv_params)[0]
+        middle_byte = (value | MIDDLE_BYTE_MASK) & 0xFF
         byte_list.append(middle_byte)
         value = (value - MIDDLE_BYTE_MASK) >> 7
 
-    terminal_byte = value.to_bytes(1, **byte_conv_params)[0]
+    terminal_byte = value & 0xFF
     byte_list.append(terminal_byte)
 
     return bytes(byte_list)
@@ -156,4 +154,46 @@ def write_binary(value: bytes) -> bytes:
 
 def write_string(value: str) -> bytes:
     return write_binary(value.encode("ascii"))
+
+
+def write_datatype(_type: int, flags: int = 0) -> bytes:
+    return (flags << 4 | _type).to_bytes(1, byteorder='big')
+
+
+def write_typed_uint32(value: int) -> bytes:
+    return write_datatype(SpopDataTypes.UINT32) + write_varint(value)
+
+
+def write_typed_uint64(value: int) -> bytes:
+    return write_datatype(SpopDataTypes.UINT64) + write_varint(value)
+
+
+def write_typed_int32(value: int) -> bytes:
+    return write_datatype(SpopDataTypes.INT32) + write_varint(value)
+
+
+def write_typed_int64(value: int) -> bytes:
+    return write_datatype(SpopDataTypes.INT64) + write_varint(value)
+
+
+def write_typed_string(value: str) -> bytes:
+    return write_datatype(SpopDataTypes.STRING) + write_string(value)
+
+
+def write_typed_binary(value: bytes) -> bytes:
+    return write_datatype(SpopDataTypes.BINARY) + write_binary(value)
+
+
+def write_typed_ipv4(value: ipaddress.IPv4Address) -> bytes:
+    return write_datatype(SpopDataTypes.IPV4) + value.packed
+
+
+def write_typed_ipv6(value: ipaddress.IPv6Address) -> bytes:
+    return write_datatype(SpopDataTypes.IPV6) + value.packed
+
+
+def write_typed_boolean(value: bool) -> bytes:
+    return write_datatype(SpopDataTypes.BOOL, int(value))
+
+
 

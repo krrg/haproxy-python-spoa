@@ -1,7 +1,9 @@
 import asyncio
 import io
+from typing import Union
 
-from haproxyspoa.spoa_data_types import parse_varint, parse_string
+from haproxyspoa.payloads.agent_hello import AgentHelloPayload
+from haproxyspoa.spoa_data_types import parse_varint, parse_string, write_varint
 
 
 class FrameType:
@@ -29,10 +31,6 @@ class Frame:
         self.stream_id = stream_id
         self.frame_id = frame_id
         self.payload = payload
-
-        placeholder = payload.tell()
-        print(payload.read())
-        payload.seek(placeholder)
 
     def is_fragmented_or_unset(self):
         # Note: This implementation doesn't support fragmented frames, so
@@ -75,6 +73,38 @@ class Frame:
             frame_id,
             frame_bytesio
         )
+
+    async def write_frame(self, writer: asyncio.StreamWriter):
+        header_buffer = io.BytesIO()
+
+        header_buffer.write(self.type.to_bytes(1, byteorder='big'))
+        header_buffer.write(self.flags.to_bytes(4, byteorder='big'))
+        header_buffer.write(write_varint(self.stream_id))
+        header_buffer.write(write_varint(self.frame_id))
+
+        frame_header_bytes = header_buffer.getvalue()
+        frame_payload_bytes = self.payload.getvalue()
+        frame_length = len(frame_header_bytes) + len(frame_payload_bytes)
+
+        writer.write(frame_length.to_bytes(4, byteorder='big'))
+        writer.write(frame_header_bytes)
+        writer.write(frame_payload_bytes)
+        await writer.drain()
+
+
+class AgentHelloFrame(Frame):
+
+    def __init__(self,  payload: AgentHelloPayload, flags: int = 1, stream_id: int = 0, frame_id: int = 0):
+        super().__init__(
+            FrameType.AGENT_HELLO,
+            flags,
+            stream_id,
+            frame_id,
+            io.BytesIO(payload.to_bytes())
+        )
+
+
+
 
 
 

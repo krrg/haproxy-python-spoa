@@ -1,6 +1,8 @@
 import io
 
-from haproxyspoa.spoa_data_types import parse_string, parse_typed_data
+from typing import Dict
+
+from haproxyspoa.spoa_data_types import parse_string, parse_typed_data, write_string
 
 
 def parse_list_of_messages(payload: io.BytesIO) -> dict:
@@ -29,36 +31,22 @@ def parse_key_value_pair(payload: io.BytesIO):
 
 
 def parse_list_of_actions(payload: io.BytesIO):
-    raise NotImplemented()
+    raise NotImplemented("Agents do not parse actions; they only send them.")
 
 
 def parse_kv_list(payload: io.BytesIO):
     kv_list = {}
     while payload.tell() != len(payload.getbuffer()):
-        print(payload.tell())
         key = parse_string(payload)
         value = parse_typed_data(payload)
         kv_list[key] = value
     return kv_list
 
 
-class HaproxyHelloPayload:
-
-    def __init__(self, payload: io.BytesIO):
-        self.attrs = parse_kv_list(payload)
-
-    def supported_versions(self):
-        return self.attrs["supported-versions"].replace(" ", "").split(",")
-
-    def max_frame_size(self):
-        return self.attrs["max-frame-size"]
-
-    def capabilities(self):
-        return self.attrs["capabilities"].replace(" ", "").split(",")
-
-    def healthcheck(self) -> bool:
-        return self.attrs.get("healthcheck", False)
-
-    def engine_id(self):
-        return self.attrs.get("engine-id", None)
+def write_kv_list(kv: Dict[str, bytes]) -> bytes:
+    buffer = io.BytesIO()
+    for k, v in kv.items():
+        buffer.write(write_string(k))
+        buffer.write(v)
+    return buffer.getvalue()
 
