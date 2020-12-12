@@ -1,9 +1,9 @@
 import asyncio
 import io
-from typing import Union
 
+from haproxyspoa.payloads.actions import ActionsPayload
 from haproxyspoa.payloads.agent_hello import AgentHelloPayload
-from haproxyspoa.spoa_data_types import parse_varint, parse_string, write_varint
+from haproxyspoa.spoa_data_types import parse_varint, write_varint
 
 
 class FrameType:
@@ -16,7 +16,7 @@ class FrameType:
     ACK = 103
 
 
-class Frame:
+class FrameHeaders:
 
     def __init__(
         self,
@@ -24,13 +24,11 @@ class Frame:
         flags: int,
         stream_id: int,
         frame_id: int,
-        payload: io.BytesIO,
     ):
         self.type = frame_type
         self.flags = flags
         self.stream_id = stream_id
         self.frame_id = frame_id
-        self.payload = payload
 
     def is_fragmented_or_unset(self):
         # Note: This implementation doesn't support fragmented frames, so
@@ -55,6 +53,25 @@ class Frame:
     def is_ack(self):
         return self.type == FrameType.ACK
 
+
+class Frame:
+
+    def __init__(
+        self,
+        frame_type: int,
+        flags: int,
+        stream_id: int,
+        frame_id: int,
+        payload: io.BytesIO,
+    ):
+        self.headers = FrameHeaders(
+            frame_type,
+            flags,
+            stream_id,
+            frame_id
+        )
+        self.payload = payload
+
     @staticmethod
     async def read_frame(reader: asyncio.StreamReader):
         frame_length = int.from_bytes(await reader.readexactly(4), byteorder='big', signed=False)
@@ -77,10 +94,10 @@ class Frame:
     async def write_frame(self, writer: asyncio.StreamWriter):
         header_buffer = io.BytesIO()
 
-        header_buffer.write(self.type.to_bytes(1, byteorder='big'))
-        header_buffer.write(self.flags.to_bytes(4, byteorder='big'))
-        header_buffer.write(write_varint(self.stream_id))
-        header_buffer.write(write_varint(self.frame_id))
+        header_buffer.write(self.headers.type.to_bytes(1, byteorder='big'))
+        header_buffer.write(self.headers.flags.to_bytes(4, byteorder='big'))
+        header_buffer.write(write_varint(self.headers.stream_id))
+        header_buffer.write(write_varint(self.headers.frame_id))
 
         frame_header_bytes = header_buffer.getvalue()
         frame_payload_bytes = self.payload.getvalue()
@@ -102,11 +119,5 @@ class AgentHelloFrame(Frame):
             frame_id,
             io.BytesIO(payload.to_bytes())
         )
-
-
-
-
-
-
 
 
