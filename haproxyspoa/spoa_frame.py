@@ -1,12 +1,12 @@
 import asyncio
 import io
+from enum import IntEnum
 
-from haproxyspoa.payloads.actions import ActionsPayload
 from haproxyspoa.payloads.agent_hello import AgentHelloPayload
 from haproxyspoa.spoa_data_types import parse_varint, write_varint
 
 
-class FrameType:
+class FrameType(IntEnum):
     FRAGMENT = 0
     HAPROXY_HELLO = 1
     HAPROXY_DISCONNECT = 2

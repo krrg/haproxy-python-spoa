@@ -8,4 +8,3 @@ class NotifyPayload:
     def __init__(self, payload: io.BytesIO):
         self.messages = parse_list_of_messages(payload)
 
-        print(self.messages)

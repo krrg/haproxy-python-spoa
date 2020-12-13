@@ -1,53 +1,81 @@
 import asyncio
 
+from haproxyspoa.payloads.ack import AckPayload, ActionVarScope
+from haproxyspoa.payloads.agent_disconnect import DisconnectStatusCode, AgentDisconnectPayload
 from haproxyspoa.payloads.agent_hello import AgentHelloPayload, AgentCapabilities
+from haproxyspoa.payloads.haproxy_disconnect import HaproxyDisconnectPayload
 from haproxyspoa.payloads.haproxy_hello import HaproxyHelloPayload
 from haproxyspoa.payloads.notify import NotifyPayload
-from haproxyspoa.spoa_frame import Frame, AgentHelloFrame
+from haproxyspoa.spoa_frame import Frame, AgentHelloFrame, FrameType
 
 
 class SpoaServer:
 
     async def handle_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        await self.handle_hello_handshake(reader, writer)
+        haproxy_hello_frame = await Frame.read_frame(reader)
+        if not haproxy_hello_frame.headers.is_haproxy_hello():
+            await self.send_agent_disconnect(writer)
+            return
+        await self.handle_hello_handshake(haproxy_hello_frame, writer)
+
+        if HaproxyHelloPayload(haproxy_hello_frame.payload).healthcheck():
+            print("It is just a health check, immediately disconnecting")
+            return
+
+        print("Completed new handshake with Haproxy")
 
         while True:
             frame = await Frame.read_frame(reader)
 
             if frame.headers.is_haproxy_disconnect():
-                await self.handle_haproxy_disconnect(reader, writer)
+                await self.handle_haproxy_disconnect(frame)
+                await self.send_agent_disconnect(writer)
+                return
             elif frame.headers.is_haproxy_notify():
                 await self.handle_haproxy_notify(frame, writer)
 
     async def handle_haproxy_notify(self, frame: Frame, writer: asyncio.StreamWriter):
-        print(frame.headers.frame_id)
-        print(frame.headers.stream_id)
-        action_payload = NotifyPayload(frame.payload)
+        notify_payload = NotifyPayload(frame.payload)
+
+        print("Received messages: ", notify_payload.messages)
+
+        ack = AckPayload().set_var(ActionVarScope.TRANSACTION, "bubbles", "bigbubbleshere")
+
+        ack_frame = Frame(
+            frame_type=FrameType.ACK,
+            stream_id=frame.headers.stream_id,
+            frame_id=frame.headers.frame_id,
+            flags=1,
+            payload=ack.to_bytes()
+        )
+        await ack_frame.write_frame(writer)
+        await writer.drain()
 
     async def send_agent_disconnect(self, writer: asyncio.StreamWriter):
-        pass
+        disconnect_frame = Frame(
+            frame_type=FrameType.AGENT_DISCONNECT,
+            flags=1,
+            stream_id=0,
+            frame_id=0,
+            payload=AgentDisconnectPayload().to_buffer()
+        )
+        await disconnect_frame.write_frame(writer)
 
-    async def handle_haproxy_disconnect(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        print("Haproxy is disconnecting us")
-        # TODO: Send an agent-disconnect
-        await self.send_agent_disconnect(writer)
-        return
+    async def handle_haproxy_disconnect(self, frame: Frame):
+        payload = HaproxyDisconnectPayload(frame.payload)
+        if payload.status_code() != DisconnectStatusCode.NORMAL:
+            print(f"Haproxy is disconnecting us with status code {payload.status_code()} - `{payload.message()}`")
 
-    async def handle_hello_handshake(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        haproxy_hello_frame = await Frame.read_frame(reader)
-        payload = HaproxyHelloPayload(haproxy_hello_frame.payload)
-
+    async def handle_hello_handshake(self, frame: Frame, writer: asyncio.StreamWriter):
         agent_hello_frame = AgentHelloFrame(
             payload=AgentHelloPayload(
                 capabilities=AgentCapabilities()
             ),
-            stream_id=haproxy_hello_frame.headers.stream_id,
-            frame_id=haproxy_hello_frame.headers.frame_id,
+            stream_id=frame.headers.stream_id,
+            frame_id=frame.headers.frame_id,
         )
         await agent_hello_frame.write_frame(writer)
 
-        if payload.healthcheck():
-            await self.send_agent_disconnect(writer)
 
     async def run(self, host: str = "0.0.0.0", port: int = 9002):
         server = await asyncio.start_server(self.handle_connection, host=host, port=port, )

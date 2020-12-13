@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from collections import namedtuple, defaultdict
 
-from haproxyspoa.spoa_data_types import parse_string, parse_typed_data, write_string
+from haproxyspoa.spoa_data_types import parse_string, parse_typed_data, write_string, write_typed_autodetect
 
 
 def parse_list_of_messages(payload: io.BytesIO) -> dict:
@@ -13,8 +13,6 @@ def parse_list_of_messages(payload: io.BytesIO) -> dict:
     while payload.tell() != len(payload.getbuffer()):
         message_name = parse_string(payload)
         num_args = int.from_bytes(payload.read(1), byteorder='little', signed=False)
-
-        print("The number of arguments is: ", num_args)
 
         arguments = defaultdict(list)
         for _ in range(num_args):
@@ -37,31 +35,28 @@ def parse_key_value_pair(payload: io.BytesIO):
 
 class Action:
 
-    def __init__(self, _type, args):
+    SET_VAR = 1
+    UNSET_VAR = 2
+
+    def __init__(self, _type: int, args: int):
         self.type = _type,
         self.args = args
 
 
-def parse_list_of_actions(payload: io.BytesIO) -> List[Action]:
-    # Note: the agent should never have to actually parse this...
-    #  Didn't realize that until later.
-    actions = []
-    while payload.tell() != len(payload.getbuffer()):
-        action_type = payload.read(1)[0]
-        num_args = payload.read(1)[0]
+def write_list_of_actions(actions: list) -> bytes:
+    buffer = io.BytesIO()
 
-        print(f"Just read action_type of {action_type}")
-        print(f"This action has {num_args} number of args")
+    for action in actions:
+        _type = int.to_bytes(action.type, 1, byteorder='big', signed=False)
+        num_args = int.to_bytes(len(action.args), 1, byteorder='big', signed=False)
 
-        args = list([
-            parse_typed_data(payload) for _ in range(num_args)
-        ])
-        print("The args are as follows: ", args)
-        print()
-        actions.append(
-            Action(action_type, args)
-        )
-    return actions
+        buffer.write(_type)
+        buffer.write(num_args)
+
+        for arg in action.args:
+            buffer.write(write_typed_autodetect(arg))
+
+    return buffer.getvalue()
 
 
 def parse_kv_list(payload: io.BytesIO):

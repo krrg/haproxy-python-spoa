@@ -196,4 +196,23 @@ def write_typed_boolean(value: bool) -> bytes:
     return write_datatype(SpopDataTypes.BOOL, int(value))
 
 
+def write_typed_autodetect(value) -> bytes:
+    if isinstance(value, int):
+        return write_typed_int64(value)
+    elif isinstance(value, str):
+        return write_typed_string(value)
+    elif isinstance(value, bool):
+        return write_typed_boolean(value)
+    elif isinstance(value, ipaddress.IPv4Address):
+        return write_typed_ipv4(value)
+    elif isinstance(value, ipaddress.IPv6Address):
+        return write_typed_ipv6(value)
+    elif isinstance(value, bytes):
+        return write_typed_binary(value)
+    else:
+        raise TypeError(f"Unable to serialize type {type(value)} into an SPOP-equivalent!")
+
+
+
+
 
