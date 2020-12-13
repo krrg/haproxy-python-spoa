@@ -23,7 +23,7 @@ class ActionSetVar:
 
     def to_bytes(self) -> bytes:
         buffer = io.BytesIO()
-        buffer.write(int.to_bytes(0x99, 1, byteorder='big', signed=False))
+        buffer.write(int.to_bytes(Action.SET_VAR, 1, byteorder='big', signed=False))
         buffer.write(int.to_bytes(3, 1, byteorder='big', signed=False))  # Number of arguments
         buffer.write(int.to_bytes(int(self.scope.value), 1, byteorder='big', signed=False))
         buffer.write(write_string(self.name))

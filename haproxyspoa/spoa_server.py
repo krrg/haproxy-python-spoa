@@ -39,7 +39,7 @@ class SpoaServer:
 
         print("Received messages: ", notify_payload.messages)
 
-        ack = AckPayload().set_var(ActionVarScope.TRANSACTION, "bubbles", "bigbubbleshere")
+        ack = AckPayload().set_var(ActionVarScope.TRANSACTION, "bubbles", 203958209385)
 
         ack_frame = Frame(
             frame_type=FrameType.ACK,
@@ -49,7 +49,6 @@ class SpoaServer:
             payload=ack.to_bytes()
         )
         await ack_frame.write_frame(writer)
-        await writer.drain()
 
     async def send_agent_disconnect(self, writer: asyncio.StreamWriter):
         disconnect_frame = Frame(
