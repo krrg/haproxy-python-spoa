@@ -1,4 +1,4 @@
-FROM haproxy:2.2
+FROM haproxy:latest
 
 COPY haproxy/ /usr/local/etc/haproxy/
 

@@ -1,9 +1,15 @@
-import asyncio
+from ipaddress import IPv4Address
 
+from haproxyspoa.payloads.ack import AckPayload
 from haproxyspoa.spoa_server import SpoaServer
 
+agent = SpoaServer()
+
+
+@agent.handler("earth-to-mars")
+async def handle_earth_to_mars(src: IPv4Address, req_host: str):
+    return AckPayload().set_txn_var("bubbles", str(src) + req_host)
+
+
 if __name__ == "__main__":
-    print("Trying to run server")
-    server = SpoaServer()
-    asyncio.run(server.run(), debug=True)
-    print("The server is done")
+    agent.run(host='127.0.0.1', port=9002)

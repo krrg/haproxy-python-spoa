@@ -1,4 +1,5 @@
 import asyncio
+from typing import List
 
 from haproxyspoa.payloads.ack import AckPayload, ActionVarScope
 from haproxyspoa.payloads.agent_disconnect import DisconnectStatusCode, AgentDisconnectPayload
@@ -8,8 +9,23 @@ from haproxyspoa.payloads.haproxy_hello import HaproxyHelloPayload
 from haproxyspoa.payloads.notify import NotifyPayload
 from haproxyspoa.spoa_frame import Frame, AgentHelloFrame, FrameType
 
+import functools
+from collections import defaultdict
+
 
 class SpoaServer:
+
+    def __init__(self):
+        self.handlers = defaultdict(list)
+
+    def handler(self, message_key: str):
+        def _handler(fn):
+            @functools.wraps(fn)
+            def wrapper(*args, **kwargs):
+                return fn(*args, **kwargs)
+            self.handlers[message_key].append(wrapper)
+            return wrapper
+        return _handler
 
     async def handle_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         haproxy_hello_frame = await Frame.read_frame(reader)
@@ -37,9 +53,13 @@ class SpoaServer:
     async def handle_haproxy_notify(self, frame: Frame, writer: asyncio.StreamWriter):
         notify_payload = NotifyPayload(frame.payload)
 
-        print("Received messages: ", notify_payload.messages)
+        response_futures = []
+        for msg_key, msg_val in notify_payload.messages.items():
+            for handler in self.handlers[msg_key]:
+                response_futures.append(handler(**notify_payload.messages[msg_key]))
 
-        ack = AckPayload().set_var(ActionVarScope.TRANSACTION, "bubbles", 203958209385)
+        ack_payloads: List[AckPayload] = await asyncio.gather(*response_futures)
+        ack = AckPayload.create_from_all(*ack_payloads)
 
         ack_frame = Frame(
             frame_type=FrameType.ACK,
@@ -75,7 +95,9 @@ class SpoaServer:
         )
         await agent_hello_frame.write_frame(writer)
 
-
-    async def run(self, host: str = "0.0.0.0", port: int = 9002):
+    async def _run(self, host: str = "0.0.0.0", port: int = 9002):
         server = await asyncio.start_server(self.handle_connection, host=host, port=port, )
         await server.serve_forever()
+
+    def run(self, *args, **kwargs):
+        asyncio.run(self._run(*args, **kwargs))

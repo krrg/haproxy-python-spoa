@@ -26,7 +26,7 @@ class ActionSetVar:
         buffer.write(int.to_bytes(Action.SET_VAR, 1, byteorder='big', signed=False))
         buffer.write(int.to_bytes(3, 1, byteorder='big', signed=False))  # Number of arguments
         buffer.write(int.to_bytes(int(self.scope.value), 1, byteorder='big', signed=False))
-        buffer.write(write_string(self.name))
+        buffer.write(write_string(self.name))  # Possibly contrary to the docs, this is not a typed string.
         buffer.write(write_typed_autodetect(self.value))
         return buffer.getvalue()
 
@@ -48,8 +48,8 @@ class ActionUnsetVar:
 
 class AckPayload:
 
-    def __init__(self):
-        self.actions = []
+    def __init__(self, actions=None):
+        self.actions = actions if actions is not None else []
 
     def set_var(self, scope: ActionVarScope, name: str, value: Any):
         self.actions.append(ActionSetVar(scope, name, value))
@@ -62,13 +62,17 @@ class AckPayload:
     def set_txn_var(self, name: str, value: Any):
         return self.set_var(ActionVarScope.TRANSACTION, name, value)
 
+    @staticmethod
+    def create_from_all(*others: 'AckPayload'):
+        actions = []
+        for ack in others:
+            actions.extend(ack.actions)
+        return AckPayload(actions=actions)
+
     def to_bytes(self) -> io.BytesIO:
         buffer = io.BytesIO()
         for action in self.actions:
             buffer.write(action.to_bytes())
-
-        print(buffer.getvalue())
-
         return buffer
 
 

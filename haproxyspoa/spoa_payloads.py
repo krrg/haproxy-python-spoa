@@ -1,8 +1,6 @@
 import io
-
-from typing import Dict, List
-
-from collections import namedtuple, defaultdict
+from collections import defaultdict
+from typing import Dict
 
 from haproxyspoa.spoa_data_types import parse_string, parse_typed_data, write_string, write_typed_autodetect
 
@@ -18,6 +16,13 @@ def parse_list_of_messages(payload: io.BytesIO) -> dict:
         for _ in range(num_args):
             key, value = parse_key_value_pair(payload)
             arguments[key].append(value)
+
+        # For convenience in the handlers, flatten arguments
+        #  that have only one value mapping to the same key.
+        for argkey in arguments.keys():
+            if len(arguments[argkey]) == 1:
+                arguments[argkey] = arguments[argkey][0]
+
         messages[message_name] = arguments
 
     # Hide the default dict implementation
