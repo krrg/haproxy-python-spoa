@@ -1,16 +1,15 @@
 import asyncio
+import functools
+from collections import defaultdict
 from typing import List
 
-from haproxyspoa.payloads.ack import AckPayload, ActionVarScope
+from haproxyspoa.payloads.ack import AckPayload
 from haproxyspoa.payloads.agent_disconnect import DisconnectStatusCode, AgentDisconnectPayload
 from haproxyspoa.payloads.agent_hello import AgentHelloPayload, AgentCapabilities
 from haproxyspoa.payloads.haproxy_disconnect import HaproxyDisconnectPayload
 from haproxyspoa.payloads.haproxy_hello import HaproxyHelloPayload
 from haproxyspoa.payloads.notify import NotifyPayload
 from haproxyspoa.spoa_frame import Frame, AgentHelloFrame, FrameType
-
-import functools
-from collections import defaultdict
 
 
 class SpoaServer:
