@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import logging
 from collections import defaultdict
 from typing import List
 
@@ -34,10 +35,10 @@ class SpoaServer:
         await self.handle_hello_handshake(haproxy_hello_frame, writer)
 
         if HaproxyHelloPayload(haproxy_hello_frame.payload).healthcheck():
-            print("It is just a health check, immediately disconnecting")
+            logging.info("It is just a health check, immediately disconnecting")
             return
 
-        print("Completed new handshake with Haproxy")
+        logging.info("Completed new handshake with Haproxy")
 
         while True:
             frame = await Frame.read_frame(reader)
@@ -82,7 +83,7 @@ class SpoaServer:
     async def handle_haproxy_disconnect(self, frame: Frame):
         payload = HaproxyDisconnectPayload(frame.payload)
         if payload.status_code() != DisconnectStatusCode.NORMAL:
-            print(f"Haproxy is disconnecting us with status code {payload.status_code()} - `{payload.message()}`")
+            logging.info(f"Haproxy is disconnecting us with status code {payload.status_code()} - `{payload.message()}`")
 
     async def handle_hello_handshake(self, frame: Frame, writer: asyncio.StreamWriter):
         agent_hello_frame = AgentHelloFrame(
