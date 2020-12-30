@@ -2,3 +2,6 @@
 
 .idea
 *.iml
+build
+dist
+haproxyspoa.egg-info
