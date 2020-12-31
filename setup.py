@@ -16,11 +16,15 @@ setup(
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
-        # "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Development Status :: 2 - Pre-Alpha",
+        "Topic :: System :: Networking",
+        "Topic :: Internet :: WWW/HTTP",
+        "Framework :: AsyncIO",
     ],
-    packages=find_packages(exclude=("example")),
+    packages=find_packages(exclude=("example", "tests")),
     # include_package_data=True,
     install_requires=[],
 )

@@ -19,6 +19,9 @@ class AgentCapabilities:
         self.supported_list.add("async")
         return self
 
+    def __str__(self):
+        return ",".join(self.supported_list)
+
 
 class AgentHelloPayload:
     GENEROUS_MAX_FRAME_SIZE = 65536
@@ -32,7 +35,7 @@ class AgentHelloPayload:
     ):
         self.version = spop_version
         self.max_frame_size = max_frame_size
-        self.capabilities = ",".join(capabilities.supported_list) if capabilities is not None else ""
+        self.capabilities = str(capabilities) if capabilities is not None else ""
 
     def to_bytes(self) -> bytes:
         return write_kv_list({

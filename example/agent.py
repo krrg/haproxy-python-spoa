@@ -3,6 +3,7 @@ from ipaddress import IPv4Address
 from haproxyspoa.payloads.ack import AckPayload
 from haproxyspoa.spoa_server import SpoaServer
 
+
 agent = SpoaServer()
 
 

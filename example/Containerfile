@@ -1,4 +1,4 @@
-FROM docker.io/library/haproxy:latest
+FROM docker.io/library/haproxy:2.3
 
 COPY haproxy/ /usr/local/etc/haproxy/
 
