@@ -52,8 +52,8 @@ def write_list_of_actions(actions: list) -> bytes:
     buffer = io.BytesIO()
 
     for action in actions:
-        _type = int.to_bytes(action.type, 1, byteorder='big', signed=False)
-        num_args = int.to_bytes(len(action.args), 1, byteorder='big', signed=False)
+        _type = bytes([action.type])
+        num_args = bytes([len(action.args)])
 
         buffer.write(_type)
         buffer.write(num_args)

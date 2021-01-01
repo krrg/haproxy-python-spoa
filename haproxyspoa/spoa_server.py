@@ -16,7 +16,7 @@ import secrets
 
 
 class SpoaConnection:
-    
+
     def __init__(self, writer: asyncio.StreamWriter, handlers):
         self.logger = FlowIdLoggerAdapter(logger, {"flow_id": secrets.token_hex(4)})
         self.handlers = handlers
@@ -33,7 +33,7 @@ class SpoaConnection:
                 response_futures.append(handler(**notify_payload.messages[msg_key]))
 
         self.logger.info(f"Found {len(response_futures)} matching handlers, awaiting response...")
-        ack_payloads: List[AckPayload] = await asyncio.gather(*response_futures)
+        ack_payloads = await asyncio.gather(*response_futures)
         ack = AckPayload.create_from_all(*ack_payloads)
         payload = ack.to_bytes()
 
@@ -93,7 +93,7 @@ class SpoaServer:
 
     async def handle_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         conn = SpoaConnection(writer, self.handlers)
-        
+
         haproxy_hello_frame = await Frame.read_frame(reader)
 
         if not haproxy_hello_frame.headers.is_haproxy_hello():

@@ -22,8 +22,4 @@ if __name__ == "__main__":
     agent.run(host='127.0.0.1', port=9002)
 ```
 
-## TODO:
-* Add automated tests of our SPOP protocol implementation
-* Our target runtime was Python 3.8 or above, but it is possible this implementation could work with earlier versions.
-* Better debug logging / crash handling.
-* Document a recommended deployment strategy.
+
