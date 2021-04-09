@@ -22,4 +22,10 @@ if __name__ == "__main__":
     agent.run(host='127.0.0.1', port=9002)
 ```
 
+## Installation
+This library is published on PyPI, making it easy to install with `pip` or your favorite Python package manager.
+```
+pip install haproxyspoa
+```
+
 
