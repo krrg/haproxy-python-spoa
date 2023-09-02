@@ -16,7 +16,6 @@ class SpopDataTypes:
     BINARY = 9
 
 
-
 SINGLE_BYTE_MAX = 0xF0
 MIDDLE_BYTE_MASK = 0x80
 TERMINAL_BYTE_MASK = 0x00
@@ -100,7 +99,7 @@ def parse_typed_data(buffer: io.BytesIO):
     if _type == SpopDataTypes.NULL:
         return None
     elif _type == SpopDataTypes.BOOL:
-        return bool(flags & 0b1000)
+        return bool(flags)
     elif _type == SpopDataTypes.INT32:
         return parse_int32(buffer)
     elif _type == SpopDataTypes.UINT32:
@@ -211,8 +210,3 @@ def write_typed_autodetect(value) -> bytes:
         return write_typed_binary(value)
     else:
         raise TypeError(f"Unable to serialize type {type(value)} into an SPOP-equivalent!")
-
-
-
-
-
